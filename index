@@ -1,0 +1,1192 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width,initial-scale=1.0"/>
+<title>ระบบข้อมูลโรงเรียนสารบรรณ กรมสารบรรณทหารเรือ</title>
+<link href="https://fonts.googleapis.com/css2?family=Sarabun:wght@300;400;500;600;700;800&family=Prompt:wght@400;600;700;800&display=swap" rel="stylesheet"/>
+<!-- SheetJS for XLSX import -->
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+<style>
+:root{
+  --navy:#0a1f44;--navy-mid:#122d60;--navy-light:#1a3d7c;--navy-hover:#1e4a96;
+  --gold:#c9a84c;--gold-light:#e8c96a;--gold-pale:#f5e8c0;
+  --white:#ffffff;--off:#f8f9fc;--gl:#e8ecf3;--gray:#8a96ab;
+  --td:#1a2340;--tm:#3a4a68;
+  --ok:#1a8a5a;--ok-bg:#e8f7f0;
+  --err:#c0392b;--err-bg:#fdecea;
+  --info:#1a6fa8;--info-bg:#e8f3fb;
+  --warn:#b8860b;--warn-bg:#fff8e1;
+  --r:12px;--rl:18px;
+  --s1:0 2px 8px rgba(10,31,68,.10);
+  --s2:0 4px 20px rgba(10,31,68,.15);
+  --s3:0 8px 40px rgba(10,31,68,.22);
+}
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+html{scroll-behavior:smooth}
+body{font-family:'Sarabun',sans-serif;background:var(--off);color:var(--td);min-height:100vh}
+
+/* ══ LOGIN OVERLAY ══ */
+#login-overlay{
+  position:fixed;inset:0;z-index:9000;
+  background:linear-gradient(135deg,var(--navy) 0%,var(--navy-mid) 55%,#1a3060 100%);
+  display:flex;align-items:center;justify-content:center;padding:20px;
+}
+#login-overlay::before{
+  content:'';position:absolute;inset:0;
+  background:
+    radial-gradient(ellipse at 20% 80%,rgba(201,168,76,.15) 0%,transparent 50%),
+    radial-gradient(ellipse at 80% 20%,rgba(201,168,76,.10) 0%,transparent 50%),
+    url("data:image/svg+xml,%3Csvg width='60' height='60' viewBox='0 0 60 60' xmlns='http://www.w3.org/2000/svg'%3E%3Cg fill='%23c9a84c' fill-opacity='0.04'%3E%3Cpath d='M36 34v-4h-2v4h-4v2h4v4h2v-4h4v-2h-4zm0-30V0h-2v4h-4v2h4v4h2V6h4V4h-4zM6 34v-4H4v4H0v2h4v4h2v-4h4v-2H6zM6 4V0H4v4H0v2h4v4h2V6h4V4H6z'/%3E%3C/g%3E%3C/svg%3E");
+}
+.login-box{
+  position:relative;width:100%;max-width:420px;
+  background:rgba(255,255,255,.04);
+  border:1px solid rgba(201,168,76,.25);
+  border-radius:24px;padding:40px 36px;
+  backdrop-filter:blur(16px);
+  box-shadow:0 24px 80px rgba(0,0,0,.4);
+  animation:fadeUp .5s both;
+}
+.login-emblem{
+  width:80px;height:80px;
+  background:rgba(255,255,255,.08);
+  border:2px solid rgba(201,168,76,.45);
+  border-radius:50%;
+  display:flex;align-items:center;justify-content:center;
+  font-size:38px;margin:0 auto 20px;
+}
+.login-title{
+  font-family:'Prompt',sans-serif;font-size:20px;font-weight:800;
+  color:#fff;text-align:center;line-height:1.3;
+}
+.login-sub{font-size:12px;color:rgba(201,168,76,.85);text-align:center;margin-top:4px;letter-spacing:1px}
+.login-divider{
+  height:1px;background:rgba(201,168,76,.2);margin:24px 0;
+}
+.login-field{margin-bottom:16px}
+.login-field label{display:block;font-size:12.5px;font-weight:700;color:rgba(255,255,255,.7);margin-bottom:5px}
+.login-field input{
+  width:100%;border:1.5px solid rgba(255,255,255,.12);
+  border-radius:10px;padding:11px 14px;
+  font-size:14px;font-family:'Sarabun',sans-serif;
+  background:rgba(255,255,255,.06);color:#fff;
+  outline:none;transition:border-color .2s,background .2s;
+}
+.login-field input::placeholder{color:rgba(255,255,255,.3)}
+.login-field input:focus{border-color:var(--gold);background:rgba(255,255,255,.10)}
+.login-err{
+  font-size:12.5px;color:#ff6b6b;margin-top:4px;display:none;
+}
+.btn-login{
+  width:100%;background:linear-gradient(135deg,var(--gold),var(--gold-light));
+  color:var(--navy);border:none;border-radius:10px;
+  padding:13px;font-size:15px;font-weight:800;
+  font-family:'Sarabun',sans-serif;cursor:pointer;
+  margin-top:8px;transition:opacity .2s,transform .15s;
+  display:flex;align-items:center;justify-content:center;gap:8px;
+}
+.btn-login:hover{opacity:.88;transform:translateY(-1px)}
+.login-hint{
+  margin-top:16px;text-align:center;
+  font-size:11.5px;color:rgba(255,255,255,.35);
+}
+.login-hint strong{color:rgba(201,168,76,.7)}
+
+/* ══ ADMIN ROLE BADGE ══ */
+.role-badge{
+  display:inline-flex;align-items:center;gap:5px;
+  padding:3px 10px;border-radius:20px;font-size:11px;font-weight:700;
+}
+.role-badge.admin{background:rgba(201,168,76,.15);color:var(--gold-light);border:1px solid rgba(201,168,76,.3)}
+.role-badge.viewer{background:rgba(26,61,124,.15);color:#7aabff;border:1px solid rgba(122,171,255,.3)}
+
+/* ══ TOP BANNER ══ */
+.top-banner{
+  background:linear-gradient(135deg,var(--navy) 0%,var(--navy-mid) 60%,var(--navy-light) 100%);
+  color:var(--white);position:relative;overflow:hidden;
+}
+.top-banner::before{
+  content:'';position:absolute;inset:0;
+  background:
+    radial-gradient(ellipse at 80% 50%,rgba(201,168,76,.12) 0%,transparent 60%),
+    url("data:image/svg+xml,%3Csvg width='60' height='60' viewBox='0 0 60 60' xmlns='http://www.w3.org/2000/svg'%3E%3Cg fill='%23c9a84c' fill-opacity='0.04'%3E%3Cpath d='M36 34v-4h-2v4h-4v2h4v4h2v-4h4v-2h-4zm0-30V0h-2v4h-4v2h4v4h2V6h4V4h-4zM6 34v-4H4v4H0v2h4v4h2v-4h4v-2H6zM6 4V0H4v4H0v2h4v4h2V6h4V4H6z'/%3E%3C/g%3E%3C/svg%3E");
+  pointer-events:none;
+}
+.banner-inner{
+  max-width:1140px;margin:0 auto;padding:22px 24px 18px;
+  display:flex;align-items:center;gap:20px;position:relative;
+}
+.banner-emblem{
+  flex-shrink:0;width:76px;height:76px;
+  background:rgba(255,255,255,.08);
+  border:2px solid rgba(201,168,76,.5);border-radius:50%;
+  display:flex;align-items:center;justify-content:center;
+  font-size:36px;backdrop-filter:blur(6px);
+}
+.banner-text{flex:1;min-width:0}
+.banner-subtitle{font-size:10.5px;letter-spacing:2px;text-transform:uppercase;color:var(--gold-light);font-weight:600;margin-bottom:3px}
+.banner-title{font-family:'Prompt',sans-serif;font-size:clamp(14px,2.2vw,20px);font-weight:800;line-height:1.3;color:#fff}
+.banner-course{margin-top:6px;font-size:12px;color:var(--gold-pale);font-weight:500;background:rgba(201,168,76,.15);display:inline-block;padding:3px 12px;border-radius:20px;border:1px solid rgba(201,168,76,.3)}
+.banner-right{flex-shrink:0;display:flex;flex-direction:column;align-items:flex-end;gap:8px}
+.badge-box{background:linear-gradient(135deg,var(--gold),var(--gold-light));color:var(--navy);border-radius:var(--r);padding:8px 18px;font-family:'Prompt',sans-serif;font-weight:800;font-size:17px;box-shadow:0 4px 16px rgba(201,168,76,.4);text-align:center;white-space:nowrap}
+.badge-box span{display:block;font-size:9.5px;font-weight:600;opacity:.75}
+.user-info{display:flex;align-items:center;gap:8px;font-size:12px;color:rgba(255,255,255,.8)}
+.btn-logout{background:rgba(255,255,255,.1);border:1px solid rgba(255,255,255,.2);color:#fff;border-radius:7px;padding:5px 12px;font-size:12px;font-family:'Sarabun',sans-serif;cursor:pointer;transition:background .2s}
+.btn-logout:hover{background:rgba(201,168,76,.2)}
+
+/* ══ NAVBAR ══ */
+.navbar{background:var(--white);border-bottom:3px solid var(--gold);box-shadow:var(--s1);position:sticky;top:0;z-index:100}
+.nav-inner{max-width:1140px;margin:0 auto;padding:0 24px;display:flex;align-items:center;overflow-x:auto;scrollbar-width:none}
+.nav-inner::-webkit-scrollbar{display:none}
+.nav-link{display:flex;align-items:center;gap:6px;padding:13px 15px;font-size:13px;font-weight:600;color:var(--tm);text-decoration:none;border-bottom:3px solid transparent;margin-bottom:-3px;white-space:nowrap;transition:all .2s;cursor:pointer}
+.nav-link:hover,.nav-link.active{color:var(--navy);border-bottom-color:var(--gold)}
+
+/* ══ ADMIN TOOLBAR ══ */
+.admin-toolbar{
+  background:linear-gradient(135deg,#0d2550,#163a72);
+  border-bottom:1px solid rgba(201,168,76,.2);
+}
+.admin-toolbar-inner{
+  max-width:1140px;margin:0 auto;padding:8px 24px;
+  display:flex;align-items:center;gap:12px;font-size:12px;color:rgba(255,255,255,.7);
+}
+.admin-toolbar .dot{width:6px;height:6px;background:var(--gold);border-radius:50%;animation:blink 2s infinite}
+@keyframes blink{0%,100%{opacity:1}50%{opacity:.3}}
+
+/* ══ MAIN ══ */
+.main{max-width:1140px;margin:0 auto;padding:26px 24px 60px}
+.tab-section{display:none}
+.tab-section.active{display:block;animation:fadeUp .3s both}
+
+/* ══ SECTION TITLE ══ */
+.section-title{display:flex;align-items:center;gap:10px;margin-bottom:18px}
+.section-title .bar{width:5px;height:28px;background:linear-gradient(180deg,var(--gold),var(--gold-light));border-radius:3px;flex-shrink:0}
+.section-title h2{font-family:'Prompt',sans-serif;font-size:17px;font-weight:700;color:var(--navy)}
+.section-title p{font-size:12.5px;color:var(--gray);margin-top:1px}
+
+/* ══ STAT CARDS ══ */
+.stats-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(185px,1fr));gap:14px;margin-bottom:28px}
+.stat-card{background:var(--white);border-radius:var(--r);padding:18px 20px;box-shadow:var(--s1);border-left:4px solid var(--navy-light);display:flex;align-items:center;gap:14px;animation:fadeUp .5s both;transition:transform .2s,box-shadow .2s}
+.stat-card:hover{transform:translateY(-2px);box-shadow:var(--s2)}
+.stat-card.gold{border-left-color:var(--gold)}
+.stat-card.green{border-left-color:var(--ok)}
+.stat-card.red{border-left-color:var(--err)}
+.stat-icon{width:46px;height:46px;border-radius:11px;background:var(--gl);display:flex;align-items:center;justify-content:center;font-size:20px;flex-shrink:0}
+.stat-card.gold .stat-icon{background:#fef7e7}
+.stat-card.green .stat-icon{background:var(--ok-bg)}
+.stat-card.red .stat-icon{background:var(--err-bg)}
+.stat-val{font-family:'Prompt',sans-serif;font-size:24px;font-weight:800;color:var(--navy);line-height:1}
+.stat-lbl{font-size:11.5px;color:var(--gray);margin-top:2px;font-weight:500}
+
+/* ══ FORMS GRID ══ */
+.forms-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(290px,1fr));gap:16px;margin-bottom:28px}
+.form-card{background:var(--white);border-radius:var(--rl);box-shadow:var(--s1);overflow:hidden;display:flex;flex-direction:column;animation:fadeUp .5s both;transition:transform .2s,box-shadow .2s}
+.form-card:hover{transform:translateY(-3px);box-shadow:var(--s2)}
+.fch{padding:16px 18px 12px;background:linear-gradient(135deg,var(--navy),var(--navy-light));display:flex;align-items:flex-start;gap:11px}
+.fch.gold{background:linear-gradient(135deg,#7a5300,var(--gold))}
+.fch.green{background:linear-gradient(135deg,#0a5a30,var(--ok))}
+.fch.info{background:linear-gradient(135deg,#0a3f68,var(--info))}
+.fch.red{background:linear-gradient(135deg,#6b0a0a,var(--err))}
+.fci{width:40px;height:40px;background:rgba(255,255,255,.15);border-radius:9px;display:flex;align-items:center;justify-content:center;font-size:20px;flex-shrink:0}
+.fch h3{font-family:'Prompt',sans-serif;font-size:13.5px;font-weight:700;color:#fff;line-height:1.3}
+.fch p{font-size:11px;color:rgba(255,255,255,.72);margin-top:2px}
+.fcb{padding:14px 18px 18px;flex:1;display:flex;flex-direction:column}
+.form-meta{display:flex;gap:7px;flex-wrap:wrap;margin-bottom:12px}
+.form-tag{font-size:10.5px;font-weight:600;padding:2px 9px;border-radius:20px;background:var(--gl);color:var(--tm)}
+.form-tag.open{background:var(--ok-bg);color:var(--ok)}
+.form-tag.deadline{background:var(--err-bg);color:var(--err)}
+.url-row{display:flex;gap:7px;margin-top:auto}
+.url-input{flex:1;min-width:0;border:1.5px solid var(--gl);border-radius:8px;padding:7px 10px;font-size:12px;font-family:'Sarabun',sans-serif;color:var(--td);background:var(--off);outline:none;transition:border-color .2s}
+.url-input:focus{border-color:var(--gold)}
+.btn-go{background:linear-gradient(135deg,var(--gold),var(--gold-light));color:var(--navy);border:none;border-radius:8px;padding:7px 13px;font-size:12.5px;font-weight:700;font-family:'Sarabun',sans-serif;cursor:pointer;white-space:nowrap;transition:opacity .2s,transform .15s}
+.btn-go:hover{opacity:.88;transform:scale(1.03)}
+.btn-copy{background:var(--gl);color:var(--tm);border:none;border-radius:8px;padding:7px 10px;font-size:12.5px;cursor:pointer;transition:background .2s}
+.btn-copy:hover{background:var(--gold-pale)}
+.btn-del-card{background:var(--err-bg);color:var(--err);border:none;border-radius:8px;padding:7px 10px;font-size:12.5px;cursor:pointer;transition:background .2s}
+.btn-del-card:hover{background:#fcc}
+
+/* ══ ADD LINK BOX ══ */
+.add-box{background:var(--white);border-radius:var(--rl);box-shadow:var(--s1);padding:22px;margin-bottom:22px;border:2px dashed var(--gl);transition:border-color .2s}
+.add-box:hover{border-color:var(--gold)}
+.add-box h3{font-family:'Prompt',sans-serif;font-size:14.5px;font-weight:700;color:var(--navy);margin-bottom:14px;display:flex;align-items:center;gap:7px}
+.grid2{display:grid;grid-template-columns:1fr 1fr;gap:11px}
+.fw{display:flex;flex-direction:column;gap:3px}
+.fw.full{grid-column:1/-1}
+.fl{font-size:12px;font-weight:700;color:var(--tm)}
+.fi{border:1.5px solid var(--gl);border-radius:8px;padding:9px 12px;font-size:13px;font-family:'Sarabun',sans-serif;color:var(--td);background:var(--off);outline:none;transition:border-color .2s,box-shadow .2s}
+.fi:focus{border-color:var(--navy-light);box-shadow:0 0 0 3px rgba(26,61,124,.08)}
+select.fi{appearance:none;background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%238a96ab' stroke-width='2'%3E%3Cpolyline points='6 9 12 15 18 9'/%3E%3C/svg%3E");background-repeat:no-repeat;background-position:right 11px center;background-size:15px}
+
+/* ══ BUTTONS ══ */
+.btn{display:inline-flex;align-items:center;gap:6px;border:none;border-radius:8px;padding:9px 18px;font-size:13px;font-weight:700;font-family:'Sarabun',sans-serif;cursor:pointer;transition:opacity .2s,transform .15s}
+.btn:hover{opacity:.88;transform:translateY(-1px)}
+.btn-navy{background:linear-gradient(135deg,var(--navy),var(--navy-light));color:#fff}
+.btn-gold{background:linear-gradient(135deg,var(--gold),var(--gold-light));color:var(--navy)}
+.btn-ok{background:linear-gradient(135deg,#0d6e3f,var(--ok));color:#fff}
+.btn-err{background:linear-gradient(135deg,#8a1515,var(--err));color:#fff}
+.btn-sm{padding:6px 13px;font-size:12px}
+.btn-xs{padding:4px 10px;font-size:11.5px}
+
+/* ══ TABLE ══ */
+.table-wrap{background:var(--white);border-radius:var(--rl);box-shadow:var(--s1);overflow:hidden;margin-bottom:28px}
+.table-toolbar{padding:14px 18px;display:flex;align-items:center;justify-content:space-between;gap:10px;flex-wrap:wrap;border-bottom:1px solid var(--gl)}
+.search-box{display:flex;align-items:center;gap:7px;background:var(--off);border:1.5px solid var(--gl);border-radius:8px;padding:7px 12px}
+.search-box input{border:none;background:transparent;outline:none;font-size:13px;font-family:'Sarabun',sans-serif;width:180px;color:var(--td)}
+.tbl{width:100%;border-collapse:collapse}
+.tbl th{background:linear-gradient(135deg,var(--navy),var(--navy-light));color:#fff;font-size:12px;font-weight:700;padding:11px 14px;text-align:left;white-space:nowrap}
+.tbl td{padding:10px 14px;font-size:12.5px;color:var(--td);border-bottom:1px solid var(--gl)}
+.tbl tr:last-child td{border-bottom:none}
+.tbl tr:hover td{background:#f4f6fb}
+.sbadge{display:inline-block;padding:3px 10px;border-radius:20px;font-size:11px;font-weight:700}
+.sbadge.ok{background:var(--ok-bg);color:var(--ok)}
+.sbadge.pending{background:var(--warn-bg);color:var(--warn)}
+.sbadge.err{background:var(--err-bg);color:var(--err)}
+.sbadge.info{background:var(--info-bg);color:var(--info)}
+.tbl .act-btns{display:flex;gap:5px}
+
+/* ══ IMPORT ZONE ══ */
+.import-zone{
+  border:2.5px dashed var(--gl);border-radius:var(--rl);
+  padding:32px 24px;text-align:center;cursor:pointer;
+  transition:border-color .2s,background .2s;margin-bottom:18px;
+  background:var(--white);
+}
+.import-zone:hover,.import-zone.drag{border-color:var(--gold);background:var(--gold-pale)}
+.import-zone .iz-icon{font-size:40px;margin-bottom:8px}
+.import-zone h4{font-family:'Prompt',sans-serif;font-size:15px;font-weight:700;color:var(--navy);margin-bottom:4px}
+.import-zone p{font-size:12.5px;color:var(--gray)}
+.import-zone input[type=file]{display:none}
+.import-preview{background:var(--white);border-radius:var(--rl);box-shadow:var(--s1);overflow:hidden;margin-bottom:18px}
+.import-preview-head{padding:12px 18px;background:var(--gl);display:flex;align-items:center;justify-content:space-between;font-size:13px;font-weight:700;color:var(--navy)}
+
+/* ══ MODAL ══ */
+.modal-bg{position:fixed;inset:0;background:rgba(10,31,68,.55);z-index:800;display:none;align-items:center;justify-content:center;padding:16px}
+.modal-bg.open{display:flex}
+.modal{background:var(--white);border-radius:var(--rl);max-width:520px;width:100%;box-shadow:var(--s3);overflow:hidden;animation:fadeUp .25s both;max-height:90vh;display:flex;flex-direction:column}
+.modal-hd{background:linear-gradient(135deg,var(--navy),var(--navy-light));padding:16px 20px;display:flex;align-items:center;justify-content:space-between;flex-shrink:0}
+.modal-hd h3{font-family:'Prompt',sans-serif;font-size:15px;font-weight:700;color:#fff}
+.modal-close{background:rgba(255,255,255,.15);border:none;border-radius:6px;width:28px;height:28px;color:#fff;font-size:16px;cursor:pointer;display:flex;align-items:center;justify-content:center}
+.modal-body{padding:20px;overflow-y:auto}
+.modal-footer{padding:14px 20px;border-top:1px solid var(--gl);display:flex;justify-content:flex-end;gap:10px;flex-shrink:0}
+
+/* ══ ANNOUNCE ══ */
+.announce-list{display:flex;flex-direction:column;gap:11px;margin-bottom:28px}
+.ann-item{background:var(--white);border-radius:var(--r);box-shadow:var(--s1);padding:14px 18px;display:flex;align-items:flex-start;gap:12px;border-left:4px solid var(--navy-light);animation:fadeUp .4s both;transition:box-shadow .2s}
+.ann-item:hover{box-shadow:var(--s2)}
+.ann-item.urgent{border-left-color:var(--err)}
+.ann-item.info{border-left-color:var(--info)}
+.ann-item.success{border-left-color:var(--ok)}
+.ann-icon{font-size:22px;flex-shrink:0;margin-top:1px}
+.ann-item h4{font-size:13.5px;font-weight:700;color:var(--navy);margin-bottom:2px}
+.ann-item p{font-size:12.5px;color:var(--tm);line-height:1.6}
+.ann-date{font-size:11px;color:var(--gray);margin-top:4px;font-weight:600}
+
+/* ══ FOOTER ══ */
+.footer{background:var(--navy);color:rgba(255,255,255,.65);text-align:center;padding:18px 24px;font-size:12px}
+.footer strong{color:var(--gold-light)}
+
+/* ══ TOAST ══ */
+.toast{position:fixed;bottom:24px;right:24px;background:var(--navy);color:#fff;padding:11px 18px;border-radius:10px;font-size:13px;font-weight:600;box-shadow:var(--s3);z-index:9999;opacity:0;transform:translateY(20px);transition:all .3s;pointer-events:none;border-left:4px solid var(--gold);max-width:320px}
+.toast.show{opacity:1;transform:translateY(0)}
+
+/* ══ UTILS ══ */
+.hidden{display:none!important}
+.admin-only{display:none}
+.is-admin .admin-only{display:block}
+.is-admin .admin-only-flex{display:flex}
+.admin-only-flex{display:none}
+.gap10{display:flex;gap:10px;flex-wrap:wrap;align-items:center}
+.mt12{margin-top:12px}
+.mt18{margin-top:18px}
+.text-center{text-align:center}
+.text-gray{color:var(--gray)}
+.fw700{font-weight:700}
+.chip{display:inline-block;padding:2px 9px;border-radius:20px;font-size:11px;font-weight:600}
+.chip.navy{background:rgba(26,61,124,.12);color:var(--navy-light)}
+.empty-row td{text-align:center;color:var(--gray);padding:32px!important}
+
+@keyframes fadeUp{from{opacity:0;transform:translateY(14px)}to{opacity:1;transform:translateY(0)}}
+
+/* ══ RESPONSIVE ══ */
+@media(max-width:700px){
+  .banner-inner{flex-wrap:wrap;padding:16px 14px;gap:12px}
+  .banner-emblem{width:60px;height:60px;font-size:28px}
+  .banner-right{order:3;width:100%;flex-direction:row;justify-content:space-between}
+  .main{padding:16px 12px 50px}
+  .stats-grid{grid-template-columns:repeat(2,1fr)}
+  .forms-grid{grid-template-columns:1fr}
+  .grid2{grid-template-columns:1fr}
+  .fw.full{grid-column:auto}
+  .table-wrap{overflow-x:auto}
+  .tbl{min-width:600px}
+  .search-box input{width:120px}
+  .modal{max-width:100%}
+}
+</style>
+</head>
+<body>
+
+<!-- ════════════════════════════════════════
+     LOGIN OVERLAY
+════════════════════════════════════════ -->
+<div id="login-overlay">
+  <div class="login-box">
+    <div class="login-emblem">⚓</div>
+    <div class="login-title">ระบบข้อมูลโรงเรียนสารบรรณ<br/>กรมสารบรรณทหารเรือ</div>
+    <div class="login-sub">ROYAL THAI NAVY · SECRETARIAT SCHOOL</div>
+    <div class="login-divider"></div>
+    <div class="login-field">
+      <label>ชื่อผู้ใช้งาน (Username)</label>
+      <input type="text" id="l-user" placeholder="กรอก username" autocomplete="username"/>
+    </div>
+    <div class="login-field">
+      <label>รหัสผ่าน (Password)</label>
+      <input type="password" id="l-pass" placeholder="กรอก password" autocomplete="current-password" onkeydown="if(event.key==='Enter')doLogin()"/>
+      <div class="login-err" id="l-err">❌ ชื่อผู้ใช้หรือรหัสผ่านไม่ถูกต้อง</div>
+    </div>
+    <button class="btn-login" onclick="doLogin()">🔐 เข้าสู่ระบบ</button>
+    <div class="login-hint">
+      Admin: <strong>admin / navy2569</strong> &nbsp;|&nbsp; ผู้เรียน: <strong>student / rtns69</strong>
+    </div>
+  </div>
+</div>
+
+<!-- ════════════════════════════════════════
+     MAIN APP (hidden until login)
+════════════════════════════════════════ -->
+<div id="app" class="hidden">
+
+<!-- TOP BANNER -->
+<header class="top-banner">
+  <div class="banner-inner">
+    <div class="banner-emblem">⚓</div>
+    <div class="banner-text">
+      <div class="banner-subtitle">กรมสารบรรณทหารเรือ · Royal Thai Navy</div>
+      <div class="banner-title">ระบบข้อมูลโรงเรียนสารบรรณ กรมสารบรรณทหารเรือ</div>
+      <div class="banner-course">หลักสูตรอาชีพเพื่อเลื่อนฐานะชั้น พ.จ.อ. | พรรค พศ. เหล่า สบ. | รุ่นที่ 2/69</div>
+    </div>
+    <div class="banner-right">
+      <div class="badge-box"><span>รุ่นที่</span>2/69</div>
+      <div class="user-info">
+        <span id="display-name">—</span>
+        <span id="display-role"></span>
+        <button class="btn-logout" onclick="doLogout()">ออกจากระบบ</button>
+      </div>
+    </div>
+  </div>
+</header>
+
+<!-- ADMIN TOOLBAR -->
+<div class="admin-toolbar admin-only">
+  <div class="admin-toolbar-inner">
+    <div class="dot"></div>
+    <span>โหมดผู้ดูแลระบบ (Admin Mode)</span>
+    <span style="margin-left:auto;opacity:.5">สามารถเพิ่ม ลบ แก้ไขข้อมูลได้ทั้งหมด</span>
+  </div>
+</div>
+
+<!-- NAVBAR -->
+<nav class="navbar">
+  <div class="nav-inner">
+    <a class="nav-link active" onclick="switchTab('dashboard',this)">🏠 หน้าหลัก</a>
+    <a class="nav-link" onclick="switchTab('forms',this)">📋 แบบฟอร์ม / ลิงก์</a>
+    <a class="nav-link" onclick="switchTab('schedule',this)">📅 ตารางเรียน</a>
+    <a class="nav-link" onclick="switchTab('students',this)">👥 รายชื่อนักเรียน</a>
+    <a class="nav-link" onclick="switchTab('announce',this)">📣 ประกาศ</a>
+  </div>
+</nav>
+
+<main class="main">
+
+<!-- ══════════ DASHBOARD ══════════ -->
+<section id="tab-dashboard" class="tab-section active">
+  <div class="stats-grid">
+    <div class="stat-card" style="animation-delay:.05s">
+      <div class="stat-icon">👨‍💼</div>
+      <div><div class="stat-val" id="s-total">0</div><div class="stat-lbl">นักเรียนทั้งหมด</div></div>
+    </div>
+    <div class="stat-card gold" style="animation-delay:.10s">
+      <div class="stat-icon">📋</div>
+      <div><div class="stat-val" id="s-forms">0</div><div class="stat-lbl">แบบฟอร์ม / ลิงก์</div></div>
+    </div>
+    <div class="stat-card green" style="animation-delay:.15s">
+      <div class="stat-icon">📚</div>
+      <div><div class="stat-val" id="s-subjects">0</div><div class="stat-lbl">รายวิชาในหลักสูตร</div></div>
+    </div>
+    <div class="stat-card red" style="animation-delay:.20s">
+      <div class="stat-icon">📣</div>
+      <div><div class="stat-val" id="s-ann">0</div><div class="stat-lbl">ประกาศ</div></div>
+    </div>
+  </div>
+  <div class="section-title"><div class="bar"></div><div><h2>ประกาศล่าสุด</h2><p>ข้อมูลสำคัญจากโรงเรียน</p></div></div>
+  <div class="announce-list" id="dash-announce"></div>
+</section>
+
+<!-- ══════════ FORMS ══════════ -->
+<section id="tab-forms" class="tab-section">
+  <div class="section-title"><div class="bar"></div><div><h2>แบบฟอร์ม &amp; ลิงก์</h2><p>วางลิงก์ Google Forms หรือลิงก์ใดก็ได้ให้นักเรียนเข้าทำ</p></div></div>
+
+  <div class="add-box admin-only">
+    <h3>➕ เพิ่มแบบฟอร์ม / ลิงก์ใหม่</h3>
+    <div class="grid2">
+      <div class="fw"><label class="fl">ชื่อแบบฟอร์ม *</label><input class="fi" id="f-title" type="text" placeholder="เช่น แบบประเมินความพึงพอใจ"/></div>
+      <div class="fw"><label class="fl">หมวดหมู่</label>
+        <select class="fi" id="f-cat">
+          <option>📋 ทั่วไป</option><option>📝 แบบทดสอบ</option><option>📊 แบบประเมิน</option><option>📑 ลงทะเบียน</option><option>📌 รายงาน</option>
+        </select>
+      </div>
+      <div class="fw full"><label class="fl">URL ลิงก์ *</label><input class="fi" id="f-url" type="url" placeholder="https://forms.google.com/..."/></div>
+      <div class="fw"><label class="fl">คำอธิบาย</label><input class="fi" id="f-desc" type="text" placeholder="รายละเอียด"/></div>
+      <div class="fw"><label class="fl">วันปิดรับ</label><input class="fi" id="f-dl" type="date"/></div>
+    </div>
+    <button class="btn btn-navy mt12" onclick="addFormCard()">➕ เพิ่มลิงก์</button>
+  </div>
+
+  <div class="forms-grid" id="forms-grid"></div>
+</section>
+
+<!-- ══════════ SCHEDULE ══════════ -->
+<section id="tab-schedule" class="tab-section">
+  <div class="section-title"><div class="bar"></div><div><h2>ตารางการเรียนการสอน</h2><p>หลักสูตรอาชีพ รุ่นที่ 2/69 — สามารถเพิ่ม ลบ แก้ไขได้ (Admin)</p></div></div>
+
+  <div class="gap10 mb admin-only" style="margin-bottom:16px">
+    <button class="btn btn-navy" onclick="openSubjectModal(null)">➕ เพิ่มรายวิชา</button>
+  </div>
+
+  <div class="table-wrap">
+    <div class="table-toolbar">
+      <div class="search-box">🔍 <input type="text" id="sch-search" placeholder="ค้นหารายวิชา..." oninput="renderSchedule()"/></div>
+      <div style="font-size:12px;color:var(--gray)">แสดง <strong id="sch-count">0</strong> รายวิชา</div>
+    </div>
+    <table class="tbl">
+      <thead>
+        <tr>
+          <th>#</th><th>รายวิชา</th><th>ผู้สอน</th><th>วัน / เวลา</th><th>ห้องเรียน</th><th>หน่วยกิต</th><th>สถานะ</th>
+          <th class="admin-only">จัดการ</th>
+        </tr>
+      </thead>
+      <tbody id="sch-tbody"></tbody>
+    </table>
+  </div>
+</section>
+
+<!-- ══════════ STUDENTS ══════════ -->
+<section id="tab-students" class="tab-section">
+  <div class="section-title"><div class="bar"></div><div><h2>รายชื่อนักเรียน</h2><p>เพิ่มทีละคน หรือนำเข้าจากไฟล์ .csv / .xlsx</p></div></div>
+
+  <!-- Manual Add (admin only) -->
+  <div class="add-box admin-only">
+    <h3>➕ เพิ่มนักเรียนทีละคน</h3>
+    <div class="grid2">
+      <div class="fw"><label class="fl">ยศ-ชื่อ-สกุล *</label><input class="fi" id="st-name" type="text" placeholder="เช่น จ.อ.สมชาย ใจดี"/></div>
+      <div class="fw"><label class="fl">เลขประจำตัว</label><input class="fi" id="st-no" type="text" placeholder="เช่น 6900001"/></div>
+      <div class="fw"><label class="fl">กลุ่ม</label>
+        <select class="fi" id="st-grp"><option>กลุ่มที่ 1</option><option>กลุ่มที่ 2</option><option>กลุ่มที่ 3</option></select>
+      </div>
+      <div class="fw"><label class="fl">สถานะ</label>
+        <select class="fi" id="st-status">
+          <option value="ok">✅ ปกติ</option><option value="pending">⏳ รอตรวจสอบ</option><option value="err">❌ ขาดเรียน</option>
+        </select>
+      </div>
+    </div>
+    <button class="btn btn-navy mt12" onclick="addStudentManual()">➕ เพิ่มนักเรียน</button>
+  </div>
+
+  <!-- CSV/XLSX Import (admin only) -->
+  <div class="admin-only">
+    <div class="section-title" style="margin-bottom:10px"><div class="bar"></div><div><h2>นำเข้าจากไฟล์ .CSV / .XLSX</h2><p>รองรับ Google Sheets Export, Excel</p></div></div>
+    <div class="import-zone" id="drop-zone" onclick="document.getElementById('file-import').click()" ondragover="dragOver(event)" ondragleave="dragLeave(event)" ondrop="dropFile(event)">
+      <input type="file" id="file-import" accept=".csv,.xlsx,.xls" onchange="handleFileImport(this.files[0])"/>
+      <div class="iz-icon">📂</div>
+      <h4>คลิกเพื่อเลือกไฟล์ หรือลากไฟล์มาวางที่นี่</h4>
+      <p>รองรับ .CSV และ .XLSX | คอลัมน์: ยศ-ชื่อ-สกุล, เลขประจำตัว, กลุ่ม, สถานะ</p>
+    </div>
+    <div id="import-preview" class="hidden">
+      <div class="import-preview">
+        <div class="import-preview-head">
+          <span id="prev-title">ตัวอย่างข้อมูล (5 แถวแรก)</span>
+          <div class="gap10">
+            <span id="prev-count" class="chip navy"></span>
+            <button class="btn btn-ok btn-sm" onclick="confirmImport()">✅ ยืนยันนำเข้า</button>
+            <button class="btn btn-err btn-sm" onclick="cancelImport()">✖ ยกเลิก</button>
+          </div>
+        </div>
+        <div style="overflow-x:auto">
+          <table class="tbl" id="prev-tbl">
+            <thead><tr id="prev-head"></tr></thead>
+            <tbody id="prev-body"></tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+    <!-- Download Template -->
+    <div class="gap10" style="margin-bottom:18px">
+      <button class="btn btn-gold btn-sm" onclick="downloadTemplate('csv')">⬇ ดาวน์โหลด Template .CSV</button>
+      <button class="btn btn-gold btn-sm" onclick="downloadTemplate('xlsx')">⬇ ดาวน์โหลด Template .XLSX</button>
+      <span style="font-size:12px;color:var(--gray)">ดาวน์โหลด Template แล้วกรอกข้อมูลก่อน import</span>
+    </div>
+  </div>
+
+  <!-- Student Table -->
+  <div class="table-wrap">
+    <div class="table-toolbar">
+      <div class="search-box">🔍 <input type="text" id="st-search" placeholder="ค้นหาชื่อ / เลขประจำตัว..." oninput="renderStudents()"/></div>
+      <div class="gap10">
+        <span style="font-size:12px;color:var(--gray)">ทั้งหมด <strong id="st-count">0</strong> นาย</span>
+        <button class="btn btn-gold btn-sm admin-only" onclick="exportStudentsCSV()">📤 Export CSV</button>
+        <button class="btn btn-err btn-sm admin-only" onclick="clearAllStudents()">🗑 ล้างทั้งหมด</button>
+      </div>
+    </div>
+    <table class="tbl">
+      <thead>
+        <tr>
+          <th>#</th><th>ยศ-ชื่อ-สกุล</th><th>เลขประจำตัว</th><th>กลุ่ม</th><th>สถานะ</th>
+          <th class="admin-only">จัดการ</th>
+        </tr>
+      </thead>
+      <tbody id="st-tbody"></tbody>
+    </table>
+  </div>
+</section>
+
+<!-- ══════════ ANNOUNCE ══════════ -->
+<section id="tab-announce" class="tab-section">
+  <div class="section-title"><div class="bar"></div><div><h2>ประกาศและข่าวสาร</h2><p>ข้อมูลสำคัญจากโรงเรียนและกรมสารบรรณทหารเรือ</p></div></div>
+
+  <div class="add-box admin-only">
+    <h3>📣 เพิ่มประกาศใหม่</h3>
+    <div class="grid2">
+      <div class="fw full"><label class="fl">หัวข้อประกาศ *</label><input class="fi" id="ann-title" type="text" placeholder="หัวข้อประกาศ"/></div>
+      <div class="fw full"><label class="fl">รายละเอียด</label><textarea class="fi" id="ann-body" rows="2" placeholder="รายละเอียดเพิ่มเติม" style="resize:vertical"></textarea></div>
+      <div class="fw"><label class="fl">ระดับ</label>
+        <select class="fi" id="ann-level">
+          <option value="urgent">🚨 ด่วน</option><option value="info">ℹ️ ทั่วไป</option><option value="success">✅ สำเร็จ/ผ่าน</option>
+        </select>
+      </div>
+      <div class="fw"><label class="fl">วันที่</label><input class="fi" id="ann-date" type="date"/></div>
+    </div>
+    <button class="btn btn-navy mt12" onclick="addAnnounce()">📣 เพิ่มประกาศ</button>
+  </div>
+
+  <div class="announce-list" id="ann-list"></div>
+</section>
+
+</main>
+
+<footer class="footer">
+  <strong>ระบบข้อมูลโรงเรียนสารบรรณ กรมสารบรรณทหารเรือ</strong><br/>
+  หลักสูตรอาชีพเพื่อเลื่อนฐานะชั้น พ.จ.อ. พรรค พศ. เหล่า สบ. รุ่นที่ 2/69 | © 2569
+</footer>
+
+</div><!-- /#app -->
+
+<!-- ════════════════ SUBJECT MODAL ════════════════ -->
+<div class="modal-bg" id="subj-modal">
+  <div class="modal">
+    <div class="modal-hd">
+      <h3 id="subj-modal-title">เพิ่มรายวิชา</h3>
+      <button class="modal-close" onclick="closeModal('subj-modal')">✕</button>
+    </div>
+    <div class="modal-body">
+      <div class="grid2">
+        <div class="fw full"><label class="fl">ชื่อรายวิชา *</label><input class="fi" id="sm-name" type="text" placeholder="เช่น ระเบียบงานสารบรรณ"/></div>
+        <div class="fw"><label class="fl">ผู้สอน</label><input class="fi" id="sm-teacher" type="text" placeholder="เช่น น.ต.สมศักดิ์ ดีมาก"/></div>
+        <div class="fw"><label class="fl">วัน</label>
+          <select class="fi" id="sm-day">
+            <option>จันทร์</option><option>อังคาร</option><option>พุธ</option><option>พฤหัสบดี</option><option>ศุกร์</option><option>เสาร์</option>
+          </select>
+        </div>
+        <div class="fw"><label class="fl">เวลาเริ่ม</label><input class="fi" id="sm-start" type="time" value="08:30"/></div>
+        <div class="fw"><label class="fl">เวลาสิ้นสุด</label><input class="fi" id="sm-end" type="time" value="12:00"/></div>
+        <div class="fw"><label class="fl">ห้องเรียน</label><input class="fi" id="sm-room" type="text" placeholder="เช่น 201, Lab 1"/></div>
+        <div class="fw"><label class="fl">หน่วยกิต</label><input class="fi" id="sm-credit" type="number" value="3" min="1" max="6"/></div>
+        <div class="fw"><label class="fl">สถานะ</label>
+          <select class="fi" id="sm-status">
+            <option value="ok">✅ เปิดสอน</option><option value="pending">⏳ เร็วๆ นี้</option><option value="err">🔒 ยังไม่เปิด</option>
+          </select>
+        </div>
+        <div class="fw full"><label class="fl">หมายเหตุ</label><input class="fi" id="sm-note" type="text" placeholder="ข้อมูลเพิ่มเติม (ถ้ามี)"/></div>
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn" style="background:var(--gl);color:var(--tm)" onclick="closeModal('subj-modal')">ยกเลิก</button>
+      <button class="btn btn-navy" onclick="saveSubject()">💾 บันทึก</button>
+    </div>
+  </div>
+</div>
+
+<!-- ════════ STUDENT EDIT MODAL ════════ -->
+<div class="modal-bg" id="st-modal">
+  <div class="modal">
+    <div class="modal-hd">
+      <h3>แก้ไขข้อมูลนักเรียน</h3>
+      <button class="modal-close" onclick="closeModal('st-modal')">✕</button>
+    </div>
+    <div class="modal-body">
+      <div class="grid2">
+        <div class="fw full"><label class="fl">ยศ-ชื่อ-สกุล *</label><input class="fi" id="stm-name" type="text"/></div>
+        <div class="fw"><label class="fl">เลขประจำตัว</label><input class="fi" id="stm-no" type="text"/></div>
+        <div class="fw"><label class="fl">กลุ่ม</label>
+          <select class="fi" id="stm-grp"><option>กลุ่มที่ 1</option><option>กลุ่มที่ 2</option><option>กลุ่มที่ 3</option></select>
+        </div>
+        <div class="fw full"><label class="fl">สถานะ</label>
+          <select class="fi" id="stm-status">
+            <option value="ok">✅ ปกติ</option><option value="pending">⏳ รอตรวจสอบ</option><option value="err">❌ ขาดเรียน</option>
+          </select>
+        </div>
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn" style="background:var(--gl);color:var(--tm)" onclick="closeModal('st-modal')">ยกเลิก</button>
+      <button class="btn btn-navy" onclick="saveStudentEdit()">💾 บันทึก</button>
+    </div>
+  </div>
+</div>
+
+<!-- TOAST -->
+<div class="toast" id="toast"></div>
+
+<!-- ════════════════════════════════════════
+     JAVASCRIPT
+════════════════════════════════════════ -->
+<script>
+/* ─── CREDENTIALS ───────────────────── */
+const USERS = {
+  admin:   { pass:'navy2569', role:'admin',   display:'ผู้ดูแลระบบ (Admin)' },
+  student: { pass:'rtns69',   role:'viewer',  display:'นักเรียน / ผู้เรียน' }
+};
+
+/* ─── STATE ──────────────────────────── */
+let currentUser = null;
+let subjects = [
+  { id:1, name:'ระเบียบงานสารบรรณ',          teacher:'น.ต.ประทีป รักษ์วงศ์',   day:'จันทร์',    start:'08:30',end:'12:00',room:'201',   credit:3, status:'ok',      note:'' },
+  { id:2, name:'การพิมพ์ดีดและการจัดทำเอกสาร',teacher:'ร.ท.หญิง สุมาลี อยู่ดี',day:'อังคาร',   start:'08:30',end:'12:00',room:'Lab 1', credit:2, status:'ok',      note:'' },
+  { id:3, name:'กฎหมายที่เกี่ยวข้องกับงานสารบรรณ',teacher:'น.ท.ชัยยุทธ วงศ์สมุทร',day:'พุธ',   start:'08:30',end:'12:00',room:'202',   credit:3, status:'ok',      note:'' },
+  { id:4, name:'ระบบสารสนเทศเพื่อการบริหาร',  teacher:'น.ต.ธนา พรศิริ',         day:'พฤหัสบดี', start:'08:30',end:'12:00',room:'Lab 2', credit:3, status:'ok',      note:'' },
+  { id:5, name:'การจัดการเอกสารลับ',           teacher:'น.ท.วิชัย สมบูรณ์',      day:'ศุกร์',    start:'08:30',end:'10:00',room:'203',   credit:2, status:'ok',      note:'' },
+  { id:6, name:'การบริหารงานธุรการ',           teacher:'น.ต.หญิง กมลชนก ใจดี',   day:'จันทร์',   start:'13:00',end:'16:00',room:'201',   credit:3, status:'pending', note:'' },
+  { id:7, name:'จริยธรรมและวินัยทหาร',         teacher:'น.ต.สุรศักดิ์ ศักดิ์ทอง',day:'อังคาร',   start:'13:00',end:'15:00',room:'301',   credit:2, status:'pending', note:'' },
+  { id:8, name:'การฝึกภาคปฏิบัติ',            teacher:'ทีมครูผู้สอน',           day:'พฤหัสบดี', start:'13:00',end:'16:00',room:'ภาคสนาม',credit:3, status:'err',     note:'' },
+];
+let students = [];
+let formCards = [
+  { id:1, title:'แบบทดสอบก่อนเรียน (Pre-test)',         cat:'📝 แบบทดสอบ',  url:'', desc:'ทดสอบความรู้พื้นฐานก่อนเข้าหลักสูตร', dl:'',     color:'' },
+  { id:2, title:'แบบประเมินความพึงพอใจการเรียน',        cat:'📊 แบบประเมิน',url:'', desc:'ประเมินหลังสิ้นสุดแต่ละรายวิชา',       dl:'',     color:'gold' },
+  { id:3, title:'ลงทะเบียนรับเอกสารประกอบการเรียน',    cat:'📑 ลงทะเบียน',url:'', desc:'แจ้งชื่อรับเอกสารจากห้องธุรการ',      dl:'2026-04-15', color:'green' },
+  { id:4, title:'แบบรายงานผลการฝึกปฏิบัติ',            cat:'📌 รายงาน',    url:'', desc:'กรอกผลฝึกรายสัปดาห์ส่งครูผู้สอน',    dl:'',     color:'info' },
+];
+let announces = [
+  { id:1, title:'กำหนดส่งรายงานวิชา สบ.ขั้นสูง ภายในวันที่ 15 เม.ย. 69', body:'นักเรียนทุกคนต้องส่งรายงานผ่านระบบออนไลน์เท่านั้น ห้ามส่งกระดาษโดยเด็ดขาด', level:'urgent', date:'2026-04-04' },
+  { id:2, title:'กำหนดการสอบวิชาความรู้พื้นฐาน พ.จ.อ.',                   body:'กำหนดสอบในวันที่ 20 เม.ย. 69 เวลา 08.30 น. ณ ห้องสอบ อาคาร 1 ชั้น 2',    level:'info',   date:'2026-04-03' },
+  { id:3, title:'ผลการประเมินภาคทฤษฎี ครั้งที่ 1 ประกาศแล้ว',             body:'ตรวจสอบผลได้ที่ระบบออนไลน์ หรือสอบถามครูที่ปรึกษาประจำกลุ่ม',            level:'success', date:'2026-04-01' },
+  { id:4, title:'กำหนดการปฐมนิเทศนักเรียนใหม่ รุ่นที่ 2/69',             body:'ปฐมนิเทศนักเรียนวันที่ 1 เม.ย. 69 เวลา 08.00 น. ณ ห้องประชุมใหญ่ ชั้น 1', level:'',       date:'2026-03-28' },
+];
+let nextSubjId = 9, nextStId = 1, nextFcId = 5, nextAnnId = 5;
+let editSubjId = null, editStId = null, importBuffer = [];
+
+/* ─── LOGIN ─────────────────────────── */
+function doLogin(){
+  const u = document.getElementById('l-user').value.trim().toLowerCase();
+  const p = document.getElementById('l-pass').value;
+  const err = document.getElementById('l-err');
+  if(USERS[u] && USERS[u].pass === p){
+    currentUser = { username:u, ...USERS[u] };
+    err.style.display='none';
+    document.getElementById('login-overlay').style.display='none';
+    document.getElementById('app').classList.remove('hidden');
+    applyRole();
+    initApp();
+  } else {
+    err.style.display='block';
+    document.getElementById('l-pass').value='';
+  }
+}
+function doLogout(){
+  currentUser=null;
+  document.getElementById('login-overlay').style.display='flex';
+  document.getElementById('app').classList.add('hidden');
+  document.getElementById('l-user').value='';
+  document.getElementById('l-pass').value='';
+}
+function applyRole(){
+  const isAdmin = currentUser.role==='admin';
+  document.body.classList.toggle('is-admin', isAdmin);
+  document.getElementById('display-name').textContent = currentUser.display;
+  const rb = document.getElementById('display-role');
+  rb.className='role-badge '+(isAdmin?'admin':'viewer');
+  rb.textContent = isAdmin?'👑 Admin':'👤 Viewer';
+}
+
+/* ─── INIT ───────────────────────────── */
+function initApp(){
+  renderForms(); renderSchedule(); renderStudents(); renderAnnounces(); updateStats();
+  // set today's date on ann-date
+  document.getElementById('ann-date').value = new Date().toISOString().slice(0,10);
+}
+
+/* ─── TAB ────────────────────────────── */
+function switchTab(name, el){
+  document.querySelectorAll('.tab-section').forEach(s=>s.classList.remove('active'));
+  document.querySelectorAll('.nav-link').forEach(n=>n.classList.remove('active'));
+  document.getElementById('tab-'+name).classList.add('active');
+  el.classList.add('active');
+}
+
+/* ─── STATS ──────────────────────────── */
+function updateStats(){
+  document.getElementById('s-total').textContent    = students.length;
+  document.getElementById('s-forms').textContent    = formCards.length;
+  document.getElementById('s-subjects').textContent = subjects.length;
+  document.getElementById('s-ann').textContent      = announces.length;
+  renderDashAnnounces();
+}
+
+/* ─── TOAST ──────────────────────────── */
+function toast(msg){
+  const t=document.getElementById('toast');
+  t.textContent=msg; t.classList.add('show');
+  setTimeout(()=>t.classList.remove('show'),2800);
+}
+
+/* ─── MODAL ──────────────────────────── */
+function closeModal(id){ document.getElementById(id).classList.remove('open'); }
+function openModal(id)  { document.getElementById(id).classList.add('open'); }
+
+/* ─── ESC helper ─────────────────────── */
+function esc(s){ return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;'); }
+
+/* ════════════════════════════════════════
+   FORM CARDS
+════════════════════════════════════════ */
+const colorMap = { '':'', gold:'gold', green:'green', info:'info', red:'red' };
+function renderForms(){
+  const grid = document.getElementById('forms-grid');
+  if(!formCards.length){
+    grid.innerHTML='<p class="text-gray text-center" style="padding:30px;grid-column:1/-1">ยังไม่มีแบบฟอร์ม — กรุณาเพิ่มผ่านฟอร์มด้านบน</p>';
+    return;
+  }
+  grid.innerHTML = formCards.map(f=>{
+    const dlTag = f.dl
+      ? `<span class="form-tag deadline">⏰ ปิด ${f.dl}</span>`
+      : `<span class="form-tag open">🟢 เปิดรับ</span>`;
+    const col = f.color||'';
+    const isAdmin = currentUser&&currentUser.role==='admin';
+    const delBtn  = isAdmin ? `<button class="btn-del-card" onclick="delFormCard(${f.id})" title="ลบ">🗑</button>` : '';
+    return `
+    <div class="form-card">
+      <div class="fch ${col}">
+        <div class="fci">📋</div>
+        <div><h3>${esc(f.title)}</h3><p>${esc(f.desc||f.cat)}</p></div>
+      </div>
+      <div class="fcb">
+        <div class="form-meta">
+          <span class="form-tag">${esc(f.cat)}</span>${dlTag}
+        </div>
+        <div class="url-row">
+          <input class="url-input" type="url" id="fu-${f.id}" value="${esc(f.url)}" placeholder="วางลิงก์ที่นี่..." onchange="updateFormUrl(${f.id},this.value)"/>
+          <button class="btn-copy" onclick="copyLink('fu-${f.id}')" title="คัดลอก">📋</button>
+          <button class="btn-go" onclick="openLink('fu-${f.id}')">เปิดลิงก์</button>
+          ${delBtn}
+        </div>
+      </div>
+    </div>`;
+  }).join('');
+  updateStats();
+}
+function addFormCard(){
+  const title=document.getElementById('f-title').value.trim();
+  const url=document.getElementById('f-url').value.trim();
+  if(!title){ toast('⚠️ กรุณากรอกชื่อแบบฟอร์ม'); return; }
+  formCards.push({
+    id:nextFcId++,
+    title, cat:document.getElementById('f-cat').value,
+    url, desc:document.getElementById('f-desc').value.trim(),
+    dl:document.getElementById('f-dl').value, color:''
+  });
+  ['f-title','f-url','f-desc','f-dl'].forEach(i=>document.getElementById(i).value='');
+  renderForms(); toast('✅ เพิ่มแบบฟอร์มเรียบร้อยแล้ว');
+}
+function delFormCard(id){
+  if(!confirm('ลบแบบฟอร์มนี้?')) return;
+  formCards=formCards.filter(f=>f.id!==id);
+  renderForms(); toast('🗑 ลบแบบฟอร์มแล้ว');
+}
+function updateFormUrl(id, val){
+  const f=formCards.find(f=>f.id===id);
+  if(f) f.url=val;
+}
+function openLink(inputId){
+  const url=document.getElementById(inputId)?.value.trim();
+  if(!url){ toast('⚠️ กรุณาวางลิงก์ก่อนกด'); return; }
+  if(!url.startsWith('http')){ toast('⚠️ ลิงก์ไม่ถูกต้อง'); return; }
+  window.open(url,'_blank','noopener');
+}
+function copyLink(inputId){
+  const url=document.getElementById(inputId)?.value.trim();
+  if(!url){ toast('⚠️ ไม่มีลิงก์ให้คัดลอก'); return; }
+  navigator.clipboard.writeText(url).then(()=>toast('✅ คัดลอกลิงก์แล้ว'));
+}
+
+/* ════════════════════════════════════════
+   SCHEDULE (CRUD)
+════════════════════════════════════════ */
+const statusBadge = {
+  ok:      '<span class="sbadge ok">✅ เปิดสอน</span>',
+  pending: '<span class="sbadge pending">⏳ เร็วๆ นี้</span>',
+  err:     '<span class="sbadge err">🔒 ยังไม่เปิด</span>',
+};
+function renderSchedule(){
+  const q=(document.getElementById('sch-search')?.value||'').toLowerCase();
+  const list=subjects.filter(s=>
+    s.name.toLowerCase().includes(q)||
+    s.teacher.toLowerCase().includes(q)||
+    s.day.includes(q)||s.room.toLowerCase().includes(q)
+  );
+  const isAdmin=currentUser&&currentUser.role==='admin';
+  document.getElementById('sch-count').textContent=list.length;
+  const tbody=document.getElementById('sch-tbody');
+  if(!list.length){
+    tbody.innerHTML='<tr><td colspan="8" class="empty-row">ไม่พบรายวิชาที่ค้นหา</td></tr>';
+    return;
+  }
+  tbody.innerHTML=list.map((s,i)=>{
+    const actBtns = isAdmin ? `
+      <td><div class="act-btns">
+        <button class="btn btn-gold btn-xs" onclick="openSubjectModal(${s.id})">✏️</button>
+        <button class="btn btn-err btn-xs" onclick="deleteSubject(${s.id})">🗑</button>
+      </div></td>` : '';
+    return `<tr>
+      <td>${i+1}</td>
+      <td><strong>${esc(s.name)}</strong>${s.note?`<br/><span class="text-gray" style="font-size:11px">${esc(s.note)}</span>`:''}
+      </td>
+      <td>${esc(s.teacher)}</td>
+      <td>${esc(s.day)} ${s.start}–${s.end}</td>
+      <td>${esc(s.room)}</td>
+      <td><span class="chip navy">${s.credit} หน่วยกิต</span></td>
+      <td>${statusBadge[s.status]||''}</td>
+      ${actBtns}
+    </tr>`;
+  }).join('');
+  updateStats();
+}
+function openSubjectModal(id){
+  editSubjId=id;
+  const t=document.getElementById('subj-modal-title');
+  if(id){
+    const s=subjects.find(x=>x.id===id);
+    t.textContent='แก้ไขรายวิชา';
+    document.getElementById('sm-name').value=s.name;
+    document.getElementById('sm-teacher').value=s.teacher;
+    document.getElementById('sm-day').value=s.day;
+    document.getElementById('sm-start').value=s.start;
+    document.getElementById('sm-end').value=s.end;
+    document.getElementById('sm-room').value=s.room;
+    document.getElementById('sm-credit').value=s.credit;
+    document.getElementById('sm-status').value=s.status;
+    document.getElementById('sm-note').value=s.note||'';
+  } else {
+    t.textContent='เพิ่มรายวิชา';
+    ['sm-name','sm-teacher','sm-room','sm-note'].forEach(i=>document.getElementById(i).value='');
+    document.getElementById('sm-day').value='จันทร์';
+    document.getElementById('sm-start').value='08:30';
+    document.getElementById('sm-end').value='12:00';
+    document.getElementById('sm-credit').value='3';
+    document.getElementById('sm-status').value='ok';
+  }
+  openModal('subj-modal');
+}
+function saveSubject(){
+  const name=document.getElementById('sm-name').value.trim();
+  if(!name){ toast('⚠️ กรุณากรอกชื่อรายวิชา'); return; }
+  const data={
+    name, teacher:document.getElementById('sm-teacher').value.trim(),
+    day:document.getElementById('sm-day').value,
+    start:document.getElementById('sm-start').value,
+    end:document.getElementById('sm-end').value,
+    room:document.getElementById('sm-room').value.trim(),
+    credit:parseInt(document.getElementById('sm-credit').value)||3,
+    status:document.getElementById('sm-status').value,
+    note:document.getElementById('sm-note').value.trim()
+  };
+  if(editSubjId){
+    const idx=subjects.findIndex(s=>s.id===editSubjId);
+    subjects[idx]={...subjects[idx],...data};
+    toast('✅ แก้ไขรายวิชาแล้ว');
+  } else {
+    subjects.push({id:nextSubjId++,...data});
+    toast('✅ เพิ่มรายวิชาแล้ว');
+  }
+  closeModal('subj-modal');
+  renderSchedule();
+}
+function deleteSubject(id){
+  const s=subjects.find(x=>x.id===id);
+  if(!confirm(`ลบรายวิชา "${s.name}" ?`)) return;
+  subjects=subjects.filter(x=>x.id!==id);
+  renderSchedule(); toast('🗑 ลบรายวิชาแล้ว');
+}
+
+/* ════════════════════════════════════════
+   STUDENTS
+════════════════════════════════════════ */
+const stBadge={
+  ok:     '<span class="sbadge ok">✅ ปกติ</span>',
+  pending:'<span class="sbadge pending">⏳ รอตรวจสอบ</span>',
+  err:    '<span class="sbadge err">❌ ขาดเรียน</span>',
+};
+function renderStudents(){
+  const q=(document.getElementById('st-search')?.value||'').toLowerCase();
+  const list=q ? students.filter(s=>
+    s.name.toLowerCase().includes(q)||(s.no||'').includes(q)||(s.group||'').includes(q)
+  ) : students;
+  document.getElementById('st-count').textContent=students.length;
+  const isAdmin=currentUser&&currentUser.role==='admin';
+  const tbody=document.getElementById('st-tbody');
+  if(!list.length){
+    tbody.innerHTML='<tr><td colspan="6" class="empty-row">ยังไม่มีนักเรียน — กรุณาเพิ่มหรือ Import ไฟล์</td></tr>';
+    return;
+  }
+  tbody.innerHTML=list.map((s,i)=>{
+    const actBtns=isAdmin?`
+      <td><div class="act-btns">
+        <button class="btn btn-gold btn-xs" onclick="openStudentEdit(${s.id})">✏️</button>
+        <button class="btn btn-err btn-xs" onclick="deleteStudent(${s.id})">🗑</button>
+      </div></td>`:'';
+    return `<tr>
+      <td>${i+1}</td>
+      <td>${esc(s.name)}</td>
+      <td>${esc(s.no||'—')}</td>
+      <td>${esc(s.group||'—')}</td>
+      <td>${stBadge[s.status]||''}</td>
+      ${actBtns}
+    </tr>`;
+  }).join('');
+  updateStats();
+}
+function addStudentManual(){
+  const name=document.getElementById('st-name').value.trim();
+  if(!name){ toast('⚠️ กรุณากรอกชื่อนักเรียน'); return; }
+  students.push({
+    id:nextStId++, name,
+    no:document.getElementById('st-no').value.trim(),
+    group:document.getElementById('st-grp').value,
+    status:document.getElementById('st-status').value
+  });
+  ['st-name','st-no'].forEach(i=>document.getElementById(i).value='');
+  renderStudents(); toast('✅ เพิ่มนักเรียนแล้ว');
+}
+function openStudentEdit(id){
+  const s=students.find(x=>x.id===id);
+  editStId=id;
+  document.getElementById('stm-name').value=s.name;
+  document.getElementById('stm-no').value=s.no||'';
+  document.getElementById('stm-grp').value=s.group||'กลุ่มที่ 1';
+  document.getElementById('stm-status').value=s.status||'ok';
+  openModal('st-modal');
+}
+function saveStudentEdit(){
+  const name=document.getElementById('stm-name').value.trim();
+  if(!name){ toast('⚠️ กรุณากรอกชื่อ'); return; }
+  const idx=students.findIndex(s=>s.id===editStId);
+  students[idx]={
+    ...students[idx],
+    name, no:document.getElementById('stm-no').value.trim(),
+    group:document.getElementById('stm-grp').value,
+    status:document.getElementById('stm-status').value
+  };
+  closeModal('st-modal'); renderStudents(); toast('✅ แก้ไขข้อมูลนักเรียนแล้ว');
+}
+function deleteStudent(id){
+  const s=students.find(x=>x.id===id);
+  if(!confirm(`ลบ "${s.name}" ออกจากระบบ?`)) return;
+  students=students.filter(x=>x.id!==id);
+  renderStudents(); toast('🗑 ลบนักเรียนแล้ว');
+}
+function clearAllStudents(){
+  if(!confirm('ลบนักเรียนทั้งหมดออกจากระบบ? (ไม่สามารถกู้คืนได้)')) return;
+  students=[]; renderStudents(); toast('🗑 ล้างรายชื่อนักเรียนทั้งหมดแล้ว');
+}
+
+/* ════════════════════════════════════════
+   CSV / XLSX IMPORT
+════════════════════════════════════════ */
+function dragOver(e){ e.preventDefault(); document.getElementById('drop-zone').classList.add('drag'); }
+function dragLeave(e){ document.getElementById('drop-zone').classList.remove('drag'); }
+function dropFile(e){
+  e.preventDefault(); dragLeave(e);
+  const f=e.dataTransfer.files[0];
+  if(f) handleFileImport(f);
+}
+function handleFileImport(file){
+  if(!file) return;
+  const ext=file.name.split('.').pop().toLowerCase();
+  if(!['csv','xlsx','xls'].includes(ext)){ toast('⚠️ รองรับเฉพาะ .csv และ .xlsx'); return; }
+  const reader=new FileReader();
+  reader.onload=function(e){
+    let rows=[];
+    if(ext==='csv'){
+      rows=parseCSV(e.target.result);
+    } else {
+      const wb=XLSX.read(e.target.result,{type:'binary'});
+      const ws=wb.Sheets[wb.SheetNames[0]];
+      rows=XLSX.utils.sheet_to_json(ws,{header:1,defval:''});
+    }
+    if(!rows.length){ toast('⚠️ ไม่พบข้อมูลในไฟล์'); return; }
+    showImportPreview(rows, file.name);
+  };
+  if(ext==='csv') reader.readAsText(file,'UTF-8');
+  else reader.readAsBinaryString(file);
+}
+function parseCSV(text){
+  return text.split('\n').filter(l=>l.trim()).map(l=>
+    l.split(',').map(c=>c.trim().replace(/^"|"$/g,''))
+  );
+}
+function showImportPreview(rows, fname){
+  // auto-detect header row (first row)
+  const header=rows[0];
+  const dataRows=rows.slice(1).filter(r=>r.some(c=>String(c).trim()));
+  importBuffer=dataRows;
+
+  document.getElementById('prev-title').textContent=`ตัวอย่างข้อมูลจาก "${fname}" (${Math.min(5,dataRows.length)} / ${dataRows.length} แถว)`;
+  document.getElementById('prev-count').textContent=dataRows.length+' นาย';
+
+  // Build header
+  document.getElementById('prev-head').innerHTML=header.map(h=>`<th>${esc(String(h))}</th>`).join('');
+  // Build preview body (first 5 rows)
+  document.getElementById('prev-body').innerHTML=dataRows.slice(0,5).map(r=>
+    `<tr>${r.map(c=>`<td>${esc(String(c))}</td>`).join('')}</tr>`
+  ).join('');
+
+  document.getElementById('import-preview').classList.remove('hidden');
+}
+function confirmImport(){
+  // Try to map columns: col 0=name, col 1=no, col 2=group, col 3=status
+  let added=0;
+  importBuffer.forEach(row=>{
+    const name=String(row[0]||'').trim();
+    if(!name) return;
+    const rawStatus=String(row[3]||'ok').toLowerCase();
+    let status='ok';
+    if(rawStatus.includes('รอ')||rawStatus.includes('pending')) status='pending';
+    else if(rawStatus.includes('ขาด')||rawStatus.includes('err')) status='err';
+    students.push({
+      id:nextStId++, name,
+      no:String(row[1]||'').trim(),
+      group:String(row[2]||'กลุ่มที่ 1').trim(),
+      status
+    });
+    added++;
+  });
+  importBuffer=[];
+  document.getElementById('import-preview').classList.add('hidden');
+  document.getElementById('file-import').value='';
+  renderStudents(); toast(`✅ นำเข้านักเรียน ${added} คนเรียบร้อยแล้ว`);
+}
+function cancelImport(){
+  importBuffer=[];
+  document.getElementById('import-preview').classList.add('hidden');
+  document.getElementById('file-import').value='';
+  toast('ℹ️ ยกเลิกการนำเข้าแล้ว');
+}
+
+/* ── Download Template ── */
+function downloadTemplate(type){
+  const header=['ยศ-ชื่อ-สกุล','เลขประจำตัว','กลุ่ม','สถานะ'];
+  const sample=[
+    ['จ.อ.สมชาย ใจดี','6900001','กลุ่มที่ 1','ok'],
+    ['จ.อ.สมศักดิ์ รักไทย','6900002','กลุ่มที่ 1','ok'],
+    ['จ.อ.สมหมาย พรหมดี','6900003','กลุ่มที่ 2','pending'],
+  ];
+  if(type==='csv'){
+    const csv=[header,...sample].map(r=>r.join(',')).join('\n');
+    const blob=new Blob(['\uFEFF'+csv],{type:'text/csv;charset=utf-8'});
+    dlBlob(blob,'student_template.csv');
+  } else {
+    const wb=XLSX.utils.book_new();
+    const ws=XLSX.utils.aoa_to_sheet([header,...sample]);
+    XLSX.utils.book_append_sheet(wb,ws,'นักเรียน');
+    XLSX.writeFile(wb,'student_template.xlsx');
+  }
+  toast('⬇ ดาวน์โหลด Template แล้ว');
+}
+function exportStudentsCSV(){
+  if(!students.length){ toast('⚠️ ยังไม่มีข้อมูลนักเรียน'); return; }
+  const rows=[['ยศ-ชื่อ-สกุล','เลขประจำตัว','กลุ่ม','สถานะ'],...students.map(s=>[s.name,s.no||'',s.group||'',s.status||'ok'])];
+  const csv=rows.map(r=>r.join(',')).join('\n');
+  const blob=new Blob(['\uFEFF'+csv],{type:'text/csv;charset=utf-8'});
+  dlBlob(blob,'students_export.csv');
+  toast('📤 Export CSV เรียบร้อยแล้ว');
+}
+function dlBlob(blob, fname){
+  const a=document.createElement('a');
+  a.href=URL.createObjectURL(blob);
+  a.download=fname; a.click();
+  URL.revokeObjectURL(a.href);
+}
+
+/* ════════════════════════════════════════
+   ANNOUNCEMENTS
+════════════════════════════════════════ */
+const annIcon={urgent:'🚨',info:'ℹ️',success:'✅',''  :'🏫'};
+function renderAnnounces(){
+  const list=announces;
+  const isAdmin=currentUser&&currentUser.role==='admin';
+  document.getElementById('ann-list').innerHTML=list.map(a=>`
+    <div class="ann-item ${a.level||''}">
+      <div class="ann-icon">${annIcon[a.level||'']||'📌'}</div>
+      <div style="flex:1">
+        <h4>${esc(a.title)}</h4>
+        <p>${esc(a.body)}</p>
+        <div class="ann-date">📅 ${formatDate(a.date)}</div>
+      </div>
+      ${isAdmin?`<button class="btn btn-err btn-xs" onclick="delAnnounce(${a.id})" style="flex-shrink:0">🗑</button>`:''}
+    </div>`).join('');
+  updateStats();
+}
+function renderDashAnnounces(){
+  document.getElementById('dash-announce').innerHTML=
+    announces.slice(0,3).map(a=>`
+    <div class="ann-item ${a.level||''}">
+      <div class="ann-icon">${annIcon[a.level||'']||'📌'}</div>
+      <div>
+        <h4>${esc(a.title)}</h4>
+        <p>${esc(a.body)}</p>
+        <div class="ann-date">📅 ${formatDate(a.date)}</div>
+      </div>
+    </div>`).join('');
+}
+function addAnnounce(){
+  const title=document.getElementById('ann-title').value.trim();
+  if(!title){ toast('⚠️ กรุณากรอกหัวข้อประกาศ'); return; }
+  announces.unshift({
+    id:nextAnnId++, title,
+    body:document.getElementById('ann-body').value.trim(),
+    level:document.getElementById('ann-level').value,
+    date:document.getElementById('ann-date').value||new Date().toISOString().slice(0,10)
+  });
+  ['ann-title','ann-body'].forEach(i=>document.getElementById(i).value='');
+  renderAnnounces(); toast('📣 เพิ่มประกาศเรียบร้อยแล้ว');
+}
+function delAnnounce(id){
+  if(!confirm('ลบประกาศนี้?')) return;
+  announces=announces.filter(a=>a.id!==id);
+  renderAnnounces(); toast('🗑 ลบประกาศแล้ว');
+}
+function formatDate(d){
+  if(!d) return '—';
+  try{
+    const dt=new Date(d);
+    return dt.toLocaleDateString('th-TH',{year:'numeric',month:'long',day:'numeric'});
+  }catch{ return d; }
+}
+
+/* ── Close modal on backdrop click ── */
+document.querySelectorAll('.modal-bg').forEach(bg=>{
+  bg.addEventListener('click',e=>{ if(e.target===bg) bg.classList.remove('open'); });
+});
+document.addEventListener('keydown',e=>{ if(e.key==='Escape') document.querySelectorAll('.modal-bg.open').forEach(m=>m.classList.remove('open')); });
+</script>
+</body>
+</html>
